@@ -22,15 +22,15 @@ def model(data):
 
 def guide(data):
     N = data.size(0)
-    a1 = pyro.param('a1', lambda: torch.tensor(0.9,dtype=torch.double),
+    a1 = pyro.param('a1', lambda: torch.tensor(1.0,dtype=torch.double),
         constraint=constraints.positive)
-    b1 = pyro.param('b1', lambda: torch.tensor(100.0,dtype=torch.double),
+    b1 = pyro.param('b1', lambda: torch.tensor(0.1,dtype=torch.double),
         constraint=constraints.positive)
-    a2 = pyro.param('a2', lambda: torch.tensor(1.1,dtype=torch.double),
+    a2 = pyro.param('a2', lambda: torch.tensor(1.0,dtype=torch.double),
         constraint=constraints.positive)
-    b2 = pyro.param('b2', lambda: torch.tensor(100.0,dtype=torch.double),
+    b2 = pyro.param('b2', lambda: torch.tensor(0.1,dtype=torch.double),
         constraint=constraints.positive)
-    pi = pyro.param('pi',lambda: torch.tensor([1.0]*N))
+    pi = pyro.param('pi',lambda: torch.tensor([1.0]*99))
     lambda1 = pyro.sample("lambda1", dist.Gamma(a1,b1))
     lambda2 = pyro.sample("lambda2", dist.Gamma(a2,b2))
     tau = pyro.sample("tau", dist.Categorical(torch.softmax(pi,0,torch.double)))
