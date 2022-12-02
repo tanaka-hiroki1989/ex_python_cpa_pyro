@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import math
+import statistics
 
 import torch
 from torch.distributions import constraints
@@ -11,14 +12,18 @@ from torch.distributions.binomial import Binomial
 from pyro.distributions.torch_distribution import TorchDistribution
 
 
+
 class PoissonBinomial(TorchDistribution):
     """
-
     :param probs: Location parameter.
     """
+    class _zero_to_one(constraints.Constraint):
+        def check(self, value):
+            return torch.all(value >= 0) & torch.all(value <= 1)
 
-    arg_constraints = {"probs": constraints.nonnegative}
-    support = constraints.real
+    zero_to_one =_zero_to_one()
+
+    arg_constraints = {"p": zero_to_one}
     has_rsample = True
 
     """
@@ -26,70 +31,35 @@ class PoissonBinomial(TorchDistribution):
         self.loc, self.scale = broadcast_all(loc, scale)
         super().__init__(self.loc.shape, validate_args=validate_args)
     """
-    def __init__(self, probs,validate_args=None):
-        self.N=len(probs)
-        self.probs = probs
-        super().__init__(self.probs.shape,validate_args=validate_args)
-    """
-    def expand(self, batch_shape, _instance=None):
-        new = self._get_checked_instance(PoissonBinomial, _instance)
-        batch_shape = torch.Size(batch_shape)
-        new.loc = self.loc.expand(batch_shape)
-        new.scale = self.scale.expand(batch_shape)
-        super(PoissonBinomial, new).__init__(batch_shape, validate_args=False)
-        new._validate_args = self._validate_args
-        return new
-    """
-
-    """
-    def log_prob(self, value):
-        if self._validate_args:
-            self._validate_sample(value)
-        z = (value - self.loc) / self.scale
-        return math.log(2 / math.pi) - self.scale.log() - torch.logaddexp(z, -z)
-    """
-    """ Categorical
-    def log_prob(self, value):
-        if getattr(value, '_pyro_categorical_support', None) == id(self):
-            # Assume value is a reshaped torch.arange(event_shape[0]).
-            # In this case we can call .reshape() rather than torch.gather().
-            if not torch._C._get_tracing_state():
-                if self._validate_args:
-                    self._validate_sample(value)
-                assert value.size(0) == self.logits.size(-1)
-            logits = self.logits
-            if logits.dim() <= value.dim():
-                logits = logits.reshape((1,) * (1 + value.dim() - logits.dim()) + logits.shape)
-            if not torch._C._get_tracing_state():
-                assert logits.size(-1 - value.dim()) == 1
-            return logits.transpose(-1 - value.dim(), -1).squeeze(-1)
-        return super().log_prob(value)
-    """ 
+    def __init__(self, p,validate_args=None):
+        self.N=len(p)
+        self.p = p
+        #support = constraints.integer_interval(0,self.N-1)
+        super().__init__(self.p.shape,validate_args=validate_args)
+        self.prob = self.pmf(self.p)
     
-    def log_prob(self, value):
-        if self._validate_args:
-            self._validate_sample(value)
-        z = (value - self.loc) / self.scale
-        return math.log(2 / math.pi) - self.scale.log() - torch.logaddexp(z, -z)
+    def pmf(self, p):
+        q = [p_j/(1-p_j) for p_j in p]
+        T = torch.tensor([math.fsum([math.pow(q_j,i) for q_j in q]) for i in range(self.N)])
+        #T[0]はつかわない.
+        prob=[0]*self.N
+        for k in range(self.N):
+            if k==0:
+                prob[k] = math.prod([1.0 - p[i] for i in range(self.N)])
+            else:
+                list = [math.pow(-1.0,i-1) * prob[k-i] * T[i] for i in range(1,k+1)]
+                print(k,list)
+                prob[k] = torch.tensor(math.fsum(list)*(1.0/k))
+        return prob
 
-    """
-    def rsample(self, sample_shape=torch.Size()):
-        shape = self._extended_shape(sample_shape)
-        u = self.loc.new_empty(shape).uniform_()
-        return self.icdf(u)
-    """
+    def log_prob(self, value):
+        return torch.tensor(math.log(self.prob[value]))
+
     def rsample(self,sample_shape=torch.Size()):
-        binomial = Binomial(1, self.probs)
+        binomial = Binomial(1, self.p)
         x = binomial.sample()
         return torch.sum(x,dtype=torch.int)
-    """
-    def cdf(self, value):
-        if self._validate_args:
-            self._validate_sample(value)
-        z = (value - self.loc) / self.scale
-        return z.exp().atan().mul(2 / math.pi)
 
 
-    def icdf(self, value):
-        return value.mul(math.pi / 2).tan().log().mul(self.scale).add(self.loc)
-    """
+
+
