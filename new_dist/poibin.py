@@ -1,17 +1,10 @@
-# Copyright Contributors to the Pyro project.
-# SPDX-License-Identifier: Apache-2.0
-
 import math
 import statistics
-
 import torch
 from torch.distributions import constraints
 from torch.distributions.utils import broadcast_all
 from torch.distributions.binomial import Binomial
-
 from pyro.distributions.torch_distribution import TorchDistribution
-
-
 
 class PoissonBinomial(TorchDistribution):
     """
@@ -54,7 +47,3 @@ class PoissonBinomial(TorchDistribution):
         binomial = Binomial(1, self.p)
         x = binomial.sample()
         return torch.sum(x,dtype=torch.int)
-
-
-
-
