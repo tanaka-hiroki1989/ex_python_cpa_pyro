@@ -26,11 +26,6 @@ class PoissonBinomial(TorchDistribution):
     arg_constraints = {"p": zero_to_one}
     has_rsample = True
 
-    """
-    def __init__(self, loc, scale, *, validate_args=None):
-        self.loc, self.scale = broadcast_all(loc, scale)
-        super().__init__(self.loc.shape, validate_args=validate_args)
-    """
     def __init__(self, p,validate_args=None):
         self.N=len(p)
         self.p = p
