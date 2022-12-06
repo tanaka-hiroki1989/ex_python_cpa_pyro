@@ -1,21 +1,15 @@
 import math
 import statistics
 import torch
-from torch.distributions import constraints
 from torch.distributions.utils import broadcast_all
 from torch.distributions.binomial import Binomial
 from pyro.distributions.torch_distribution import TorchDistribution
+from customizedtorch.constrains import zero_to_one
 
 class PoissonBinomial(TorchDistribution):
     """
     :param probs: Location parameter.
     """
-    class _zero_to_one(constraints.Constraint):
-        def check(self, value):
-            return torch.all(value >= 0) & torch.all(value <= 1)
-
-    zero_to_one =_zero_to_one()
-
     arg_constraints = {"p": zero_to_one}
     has_rsample = True
 
@@ -36,7 +30,7 @@ class PoissonBinomial(TorchDistribution):
                 prob[k] = math.prod([1.0 - p[i] for i in range(self.N)])
             else:
                 list = [math.pow(-1.0,i-1) * prob[k-i] * T[i] for i in range(1,k+1)]
-                print(k,list)
+                #print(k,list)
                 prob[k] = torch.tensor(math.fsum(list)*(1.0/k))
         return prob
 
