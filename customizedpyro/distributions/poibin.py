@@ -1,16 +1,16 @@
 import math
-import statistics
+#import statistics
 import torch
-from torch.distributions.utils import broadcast_all
+#from torch.distributions.utils import broadcast_all
 from torch.distributions.binomial import Binomial
 from pyro.distributions.torch_distribution import TorchDistribution
-from customizedtorch.constrains import zero_to_one
+from pyro.distributions.constraints import real_vector
 
 class PoissonBinomial(TorchDistribution):
     """
     :param probs: Location parameter.
     """
-    arg_constraints = {"p": zero_to_one}
+    arg_constraints = {"p": real_vector}
     has_rsample = True
 
     def __init__(self, p,validate_args=None):
@@ -41,3 +41,9 @@ class PoissonBinomial(TorchDistribution):
         binomial = Binomial(1, self.p)
         x = binomial.sample()
         return torch.sum(x,dtype=torch.int)
+
+    def enumerate_support(self, expand=True):
+        result = super().enumerate_support(expand=expand)
+        if not expand:
+            result._pyro_categorical_support = id(self)
+        return result
