@@ -1,0 +1,11 @@
+name: dmm_pyro
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - pytorch
+  - pyro-ppl
+  - ipykernel
+  - matplotlib
+  - scipy
