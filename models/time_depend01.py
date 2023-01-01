@@ -19,8 +19,8 @@ class model2:
         self.init_b2=init_b2
 
     def generator(self,data):   
-        lambda1 = pyro.sample("lambda1", Gamma(self.hp_a1,self.hp_b1))
-        lambda2 = pyro.sample("lambda2", Gamma(self.hp_a2,self.hp_b2))
+        lambda1 = pyro.sample("lambda1", Normal(self.hp_a1,self.hp_b1))
+        lambda2 = pyro.sample("lambda2", Normal(self.hp_a2,self.hp_b2))
         p = torch.tensor([0.0]*(self.N-1),dtype=torch.double)
         tau = pyro.sample("tau", PoissonBinomial(torch.sigmoid(p)))
         z_seq_before = torch.tensor([lambda1 * i for i in range(tau+1)])
@@ -30,12 +30,12 @@ class model2:
             pyro.sample("obs", Normal(z_seq, torch.tensor([1.0]*self.N)), obs=self.data)
 
     def inference(self,data):
-        a1 = pyro.param('a1', lambda: torch.tensor(self.init_a1,dtype=torch.double),constraint=positive)
-        b1 = pyro.param('b1', lambda: torch.tensor(self.init_b1,dtype=torch.double),constraint=positive)
-        a2 = pyro.param('a2', lambda: torch.tensor(self.init_a2,dtype=torch.double),constraint=positive)
-        b2 = pyro.param('b2', lambda: torch.tensor(self.init_b2,dtype=torch.double),constraint=positive)
+        loc1 = pyro.param('loc1', lambda: torch.tensor(self.init_a1,dtype=torch.double))
+        scale1 = pyro.param('scale1', lambda: torch.tensor(self.init_b1,dtype=torch.double),constraint=positive)
+        loc2 = pyro.param('loc2', lambda: torch.tensor(self.init_a2,dtype=torch.double))
+        scale2 = pyro.param('scale2', lambda: torch.tensor(self.init_b2,dtype=torch.double),constraint=positive)
         p = pyro.param('p',lambda: torch.tensor([0.5]*(self.N-1),dtype=torch.double),constraint=real_vector)
-        lambda1 = pyro.sample("lambda1", Gamma(a1,b1))
-        lambda2 = pyro.sample("lambda2", Gamma(a2,b2))
+        lambda1 = pyro.sample("lambda1", Normal(loc1,scale1))
+        lambda2 = pyro.sample("lambda2", Normal(loc2,scale2))
         tau = pyro.sample("tau", PoissonBinomial(torch.sigmoid(p),torch.double))
         return {"lambda1": lambda1, "lambda2": lambda2, "tau": tau}
